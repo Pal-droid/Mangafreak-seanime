@@ -11,15 +11,21 @@ class Provider {
     };
   }
 
+  // 🔍 Search for manga
   async search(opts: QueryOptions): Promise<SearchResult[]> {
     const query = opts.query.toLowerCase();
     const url = `${this.baseUrl}/Find/${encodeURIComponent(query)}`;
-
     console.log(`[Search] Querying URL: ${url}`);
+
     const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
-    const doc: DocSelectionFunction = LoadDoc(body);
 
+    if (!body || body.includes("Cloudflare") || body.includes("Just a moment")) {
+      console.log("[Search] Cloudflare or invalid response detected.");
+      return [];
+    }
+
+    const doc: DocSelectionFunction = LoadDoc(body);
     const results: SearchResult[] = [];
 
     doc(".manga_search_item").each((i, el) => {
@@ -28,7 +34,6 @@ class Provider {
 
       const title = linkEl.text().trim();
       const link = linkEl.attrs()["href"];
-
       const imgEl = el.find("span a img").first();
       const imgSrc = imgEl.attrs()["src"] ?? "";
 
@@ -45,63 +50,73 @@ class Provider {
     return results;
   }
 
+  // 📜 Get all chapters of a manga
   async findChapters(mangaId: string): Promise<ChapterDetails[]> {
     const url = `${this.baseUrl}/Manga/${mangaId}`;
     console.log(`[FindChapters] Querying URL: ${url}`);
 
     const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
-    const doc: DocSelectionFunction = LoadDoc(body);
 
-    const chapters: ChapterDetails[] = [];
-
-    // Robust selector: matches <tr> directly under <table> or inside <tbody>
-    doc("div.manga_series_list table tr, div.manga_series_list table tbody tr").each((i, el) => {
-      // Skip header row
-      if (el.find("th").length) return;
-
-      const aEl = el.find("td a").first();
-      if (!aEl.length) return;
-
-      const link = aEl.attrs()["href"];
-      const title = aEl.text().trim();
-      const date = el.find("td").eq(1).text().trim();
-
-      if (link) {
-        // Regex handles decimals, oneshots, and ignores 'e'
-        const chapterNumber = title.match(/(\d+(\.\d+)?)/)?.[1] ?? "Oneshot";
-
-        chapters.push({
-          id: link.replace("/Read1_", ""),
-          url: this.baseUrl + link,
-          title,
-          chapter: chapterNumber,
-          index: 0,
-          updatedAt: date,
-        });
-      }
-    });
-
-    // Sort ascending & reindex
-    chapters.reverse();
-    for (let i = 0; i < chapters.length; i++) {
-      chapters[i].index = i;
+    if (!body || body.includes("Cloudflare") || body.includes("Just a moment")) {
+      console.log("[FindChapters] Cloudflare or invalid response detected.");
+      return [];
     }
 
-    console.log(`[FindChapters] Returning ${chapters.length} chapters in ascending order.`);
+    const doc: DocSelectionFunction = LoadDoc(body);
+    const chapters: ChapterDetails[] = [];
+
+    // ✅ Correct selector for your provided HTML
+    doc("div.manga_series_list_section table tr").each((i, el) => {
+      const th = el.find("th");
+      if (th.length) return; // skip table header row
+
+      const linkEl = el.find("a").first();
+      const dateEl = el.find("td").eq(1);
+
+      if (!linkEl.length) return;
+
+      const link = linkEl.attrs()["href"];
+      const title = linkEl.text().trim();
+      const date = dateEl.text().trim();
+
+      if (!link) return;
+
+      // Extract number like "1", "2.5", etc.
+      const chapterNumber = title.match(/(\d+(\.\d+)?)/)?.[1] ?? "Oneshot";
+
+      chapters.push({
+        id: link.replace("/Read1_", ""),
+        url: this.baseUrl + link,
+        title,
+        chapter: chapterNumber,
+        index: 0,
+        updatedAt: date,
+      });
+    });
+
+    chapters.reverse().forEach((ch, i) => (ch.index = i));
+    console.log(`[FindChapters] Found ${chapters.length} chapters.`);
     return chapters;
   }
 
+  // 📖 Get all pages of a chapter
   async findChapterPages(chapterId: string): Promise<ChapterPage[]> {
     const url = `${this.baseUrl}/Read1_${chapterId}`;
     console.log(`[FindChapterPages] Querying URL: ${url}`);
 
     const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
-    const doc: DocSelectionFunction = LoadDoc(body);
 
+    if (!body || body.includes("Cloudflare") || body.includes("Just a moment")) {
+      console.log("[FindChapterPages] Cloudflare or invalid response detected.");
+      return [];
+    }
+
+    const doc: DocSelectionFunction = LoadDoc(body);
     const pages: ChapterPage[] = [];
 
+    // ✅ Matches: <div class="image_orientation"><img src="..." /></div>
     doc("div.image_orientation img").each((i, el) => {
       const imgSrc = el.attrs()["src"];
       if (!imgSrc) return;
