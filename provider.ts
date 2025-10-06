@@ -15,8 +15,10 @@ class Provider {
   async search(opts: QueryOptions): Promise<SearchResult[]> {
     const query = opts.query.toLowerCase();
     const url = `${this.baseUrl}/Find/${encodeURIComponent(query)}`;
+    
+    // LOG: Start search
+    console.log(`[Search] Querying URL: ${url}`);
 
-    // ADDED: { redirect: "follow" }
     const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
     const doc: DocSelectionFunction = LoadDoc(body);
@@ -40,6 +42,8 @@ class Provider {
       }
     });
 
+    // LOG: Search results count
+    console.log(`[Search] Found ${results.length} results.`);
     return results;
   }
 
@@ -48,13 +52,16 @@ class Provider {
   async findChapters(mangaId: string): Promise<ChapterDetails[]> {
     const url = `${this.baseUrl}/Manga/${mangaId}`;
     
-    // ADDED: { redirect: "follow" }
+    // LOG: Start finding chapters
+    console.log(`[FindChapters] Querying URL: ${url}`);
+    
     const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
     const doc: DocSelectionFunction = LoadDoc(body);
 
     const chapters: ChapterDetails[] = [];
     
+    // Select all chapter rows
     doc("tr").each((i, el) => {
       const aEl = el.find("td a").first();
       const link = aEl.attrs()["href"]; // Example: /Read1_Jujutsu_Kaisen_2
@@ -75,14 +82,17 @@ class Provider {
       }
     });
 
-    // REVERSE: The website lists newest to oldest, but we need oldest to newest (ascending).
-    chapters.reverse();
+    // LOG: Chapters found before processing
+    console.log(`[FindChapters] Found ${chapters.length} chapters on page.`);
 
-    // RE-INDEX: Set the correct index after sorting.
+    // REVERSE and RE-INDEX
+    chapters.reverse();
     for (let i = 0; i < chapters.length; i++) {
         chapters[i].index = i;
     }
     
+    // LOG: Chapters returned
+    console.log(`[FindChapters] Returning ${chapters.length} chapters in ascending order.`);
     return chapters;
   }
 
@@ -90,7 +100,9 @@ class Provider {
   async findChapterPages(chapterId: string): Promise<ChapterPage[]> {
     const url = `${this.baseUrl}/Read1_${chapterId}`;
     
-    // ADDED: { redirect: "follow" }
+    // LOG: Start finding chapter pages
+    console.log(`[FindChapterPages] Querying URL: ${url}`);
+    
     const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
     const doc: DocSelectionFunction = LoadDoc(body);
@@ -105,7 +117,7 @@ class Provider {
         pages.push({
           url: imgSrc.startsWith("http") ? imgSrc : this.baseUrl + imgSrc,
           index: i,
-          // The website requires a Referer header to prevent hotlink protection from blocking the images.
+          // The website requires a Referer header
           headers: {
             Referer: url,
           },
@@ -113,6 +125,8 @@ class Provider {
       }
     });
 
+    // LOG: Pages found
+    console.log(`[FindChapterPages] Found ${pages.length} pages.`);
     return pages;
   }
 }
