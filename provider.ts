@@ -12,8 +12,8 @@ class Provider {
   }
 
   async search(opts: QueryOptions): Promise<SearchResult[]> {
-    const queryParam = opts.query.toLowerCase();
-    const url = `${this.baseUrl}/Find/${encodeURIComponent(queryParam)}`;
+    const query = opts.query.toLowerCase();
+    const url = `${this.baseUrl}/Find/${encodeURIComponent(query)}`;
 
     const res = await fetch(url);
     const body = await res.text();
@@ -22,13 +22,18 @@ class Provider {
     const results: SearchResult[] = [];
 
     doc(".manga_search_item").each((i, el) => {
-      const title = el.find("h3 a").first().text().trim();
-      const link = el.find("a").first().attrs()["href"];
-      const image = el.find("img").first().attrs()["src"];
+      const linkEl = el.find("h3 a").first();
+      const title = linkEl.text().trim();
+      const link = linkEl.attrs()["href"]; // /Manga/Jujutsu_Kaisen
+
+      // Fix image: inside the first <a> in <span>
+      const imgEl = el.find("span a img").first();
+      const imgSrc = imgEl.attrs()["src"] ?? "";
+
       results.push({
         id: link.replace("/Manga/", ""),
         title,
-        image: image.startsWith("http") ? image : this.baseUrl + image,
+        image: imgSrc.startsWith("http") ? imgSrc : this.baseUrl + imgSrc,
       });
     });
 
@@ -44,9 +49,9 @@ class Provider {
     const chapters: ChapterDetails[] = [];
 
     doc("tr").each((i, el) => {
-      const linkEl = el.find("td a").first();
-      const link = linkEl.attrs()["href"];
-      const title = linkEl.text().trim();
+      const aEl = el.find("td a").first();
+      const link = aEl.attrs()["href"]; // /Read1_Jujutsu_Kaisen_2
+      const title = aEl.text().trim(); // Chapter 2 - Covert Execution
       const date = el.find("td").eq(1).text().trim();
 
       if (link) {
@@ -73,12 +78,14 @@ class Provider {
     const pages: ChapterPage[] = [];
 
     doc("div.image_orientation img").each((i, el) => {
-      const url = el.attrs()["src"];
-      pages.push({
-        url,
-        index: i,
-        headers: { Referer: this.baseUrl },
-      });
+      const src = el.attrs()["src"];
+      if (src) {
+        pages.push({
+          url: src.startsWith("http") ? src : this.baseUrl + src,
+          index: i,
+          headers: { Referer: this.baseUrl },
+        });
+      }
     });
 
     return pages;
