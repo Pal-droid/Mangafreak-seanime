@@ -1,0 +1,9 @@
+{
+  "name": "MangaFreak",
+  "type": "manga",
+  "description": "Scrapes manga from mangafreak.me",
+  "author": "weezer",
+  "version": "1.0.0",
+  "module": "provider.ts",
+  "icon": "icon.png"
+}
