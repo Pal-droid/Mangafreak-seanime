@@ -1,10 +1,12 @@
 {
-  "id": "mangafreak-seanime",
+  "id": "mangafreak",
   "name": "MangaFreak",
+  "description": "MangaFreak is an online manga provider for English readers",
+  "manifestURI": "https://raw.githubusercontent.com/Pal-droid/Mangafreak-seanime/main/manifest.json",
   "version": "1.0.0",
   "author": "pal",
-  "type": "manga",
+  "type": "manga-provider",
   "language": "typescript",
-  "payload": "https://raw.githubusercontent.com/Pal-droid/Mangafreak-seanime/main/provider.ts",
-  "description": "Manga provider for Mangafreak.me"
+  "lang": "en",
+  "payload": "https://raw.githubusercontent.com/Pal-droid/Mangafreak-seanime/main/provider.ts"
 }
