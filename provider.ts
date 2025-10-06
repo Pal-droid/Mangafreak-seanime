@@ -16,7 +16,8 @@ class Provider {
     const query = opts.query.toLowerCase();
     const url = `${this.baseUrl}/Find/${encodeURIComponent(query)}`;
 
-    const res = await fetch(url);
+    // ADDED: { redirect: "follow" }
+    const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
     const doc: DocSelectionFunction = LoadDoc(body);
 
@@ -27,16 +28,13 @@ class Provider {
       const title = linkEl.text().trim();
       const link = linkEl.attrs()["href"]; // Example: /Manga/Jujutsu_Kaisen
 
-      // Fix image: inside the first <a> in <span>
       const imgEl = el.find("span a img").first();
       const imgSrc = imgEl.attrs()["src"] ?? "";
 
       if (link) {
         results.push({
-          // Example: Jujutsu_Kaisen
           id: link.replace("/Manga/", ""), 
           title,
-          // Handle relative image URLs
           image: imgSrc.startsWith("http") ? imgSrc : this.baseUrl + imgSrc,
         });
       }
@@ -49,12 +47,14 @@ class Provider {
   // The chapters should be sorted in ascending order (0, 1, ...).
   async findChapters(mangaId: string): Promise<ChapterDetails[]> {
     const url = `${this.baseUrl}/Manga/${mangaId}`;
-    const res = await fetch(url);
+    
+    // ADDED: { redirect: "follow" }
+    const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
     const doc: DocSelectionFunction = LoadDoc(body);
 
     const chapters: ChapterDetails[] = [];
-    // The chapters are listed in a table, each row is a chapter
+    
     doc("tr").each((i, el) => {
       const aEl = el.find("td a").first();
       const link = aEl.attrs()["href"]; // Example: /Read1_Jujutsu_Kaisen_2
@@ -62,15 +62,12 @@ class Provider {
       const date = el.find("td").eq(1).text().trim();
 
       if (link) {
-        // Updated regex to handle decimals (e.g., 2.5) and 'e' (e.g., 262e)
         const chapterNumber = title.match(/(\d+(\.\d+)?|\d+e)/)?.[1] ?? "Oneshot";
         
         chapters.push({
-          // Example: Jujutsu_Kaisen_2
           id: link.replace("/Read1_", ""), 
           url: this.baseUrl + link,
           title,
-          // Ensure chapter number is clean for the property
           chapter: chapterNumber.replace('e', ''), 
           index: 0, 
           updatedAt: date,
@@ -93,7 +90,8 @@ class Provider {
   async findChapterPages(chapterId: string): Promise<ChapterPage[]> {
     const url = `${this.baseUrl}/Read1_${chapterId}`;
     
-    const res = await fetch(url);
+    // ADDED: { redirect: "follow" }
+    const res = await fetch(url, { redirect: "follow" });
     const body = await res.text();
     const doc: DocSelectionFunction = LoadDoc(body);
 
