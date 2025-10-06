@@ -11,6 +11,7 @@ class Provider {
     };
   }
 
+  // Returns the search results based on the query.
   async search(opts: QueryOptions): Promise<SearchResult[]> {
     const query = opts.query.toLowerCase();
     const url = `${this.baseUrl}/Find/${encodeURIComponent(query)}`;
@@ -24,22 +25,28 @@ class Provider {
     doc(".manga_search_item").each((i, el) => {
       const linkEl = el.find("h3 a").first();
       const title = linkEl.text().trim();
-      const link = linkEl.attrs()["href"]; // /Manga/Jujutsu_Kaisen
+      const link = linkEl.attrs()["href"]; // Example: /Manga/Jujutsu_Kaisen
 
       // Fix image: inside the first <a> in <span>
       const imgEl = el.find("span a img").first();
       const imgSrc = imgEl.attrs()["src"] ?? "";
 
-      results.push({
-        id: link.replace("/Manga/", ""),
-        title,
-        image: imgSrc.startsWith("http") ? imgSrc : this.baseUrl + imgSrc,
-      });
+      if (link) {
+        results.push({
+          // Example: Jujutsu_Kaisen
+          id: link.replace("/Manga/", ""), 
+          title,
+          // Handle relative image URLs
+          image: imgSrc.startsWith("http") ? imgSrc : this.baseUrl + imgSrc,
+        });
+      }
     });
 
     return results;
   }
 
+  // Returns the chapters based on the manga ID.
+  // The chapters should be sorted in ascending order (0, 1, ...).
   async findChapters(mangaId: string): Promise<ChapterDetails[]> {
     const url = `${this.baseUrl}/Manga/${mangaId}`;
     const res = await fetch(url);
@@ -47,43 +54,63 @@ class Provider {
     const doc: DocSelectionFunction = LoadDoc(body);
 
     const chapters: ChapterDetails[] = [];
-
+    // The chapters are listed in a table, each row is a chapter
     doc("tr").each((i, el) => {
       const aEl = el.find("td a").first();
-      const link = aEl.attrs()["href"]; // /Read1_Jujutsu_Kaisen_2
-      const title = aEl.text().trim(); // Chapter 2 - Covert Execution
+      const link = aEl.attrs()["href"]; // Example: /Read1_Jujutsu_Kaisen_2
+      const title = aEl.text().trim(); // Example: Chapter 2 - Covert Execution
       const date = el.find("td").eq(1).text().trim();
 
       if (link) {
+        // Updated regex to handle decimals (e.g., 2.5) and 'e' (e.g., 262e)
+        const chapterNumber = title.match(/(\d+(\.\d+)?|\d+e)/)?.[1] ?? "Oneshot";
+        
         chapters.push({
-          id: link.replace("/Read1_", ""),
+          // Example: Jujutsu_Kaisen_2
+          id: link.replace("/Read1_", ""), 
           url: this.baseUrl + link,
           title,
-          chapter: title.match(/\d+/)?.[0] ?? "Oneshot",
-          index: i,
+          // Ensure chapter number is clean for the property
+          chapter: chapterNumber.replace('e', ''), 
+          index: 0, 
           updatedAt: date,
         });
       }
     });
 
+    // REVERSE: The website lists newest to oldest, but we need oldest to newest (ascending).
+    chapters.reverse();
+
+    // RE-INDEX: Set the correct index after sorting.
+    for (let i = 0; i < chapters.length; i++) {
+        chapters[i].index = i;
+    }
+    
     return chapters;
   }
 
+  // Returns the chapter pages based on the chapter ID.
   async findChapterPages(chapterId: string): Promise<ChapterPage[]> {
     const url = `${this.baseUrl}/Read1_${chapterId}`;
+    
     const res = await fetch(url);
     const body = await res.text();
     const doc: DocSelectionFunction = LoadDoc(body);
 
     const pages: ChapterPage[] = [];
 
+    // All pages are <img> tags inside a <div> with class "image_orientation"
     doc("div.image_orientation img").each((i, el) => {
-      const src = el.attrs()["src"];
-      if (src) {
+      const imgSrc = el.attrs()["src"];
+
+      if (imgSrc) {
         pages.push({
-          url: src.startsWith("http") ? src : this.baseUrl + src,
+          url: imgSrc.startsWith("http") ? imgSrc : this.baseUrl + imgSrc,
           index: i,
-          headers: { Referer: this.baseUrl },
+          // The website requires a Referer header to prevent hotlink protection from blocking the images.
+          headers: {
+            Referer: url,
+          },
         });
       }
     });
