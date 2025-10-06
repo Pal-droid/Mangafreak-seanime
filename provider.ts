@@ -1,6 +1,3 @@
-/// <reference path="./manga-provider.d.ts" />
-/// <reference path="./doc.d.ts" />
-
 class Provider {
   private baseUrl = "https://ww2.mangafreak.me";
 
