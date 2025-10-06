@@ -1,89 +1,86 @@
-// MangaFreak provider for Seanime
+/// <reference path="./manga-provider.d.ts" />
+/// <reference path="./doc.d.ts" />
 
 class Provider {
+  private baseUrl = "https://ww2.mangafreak.me";
 
-    constructor() {
-        this.baseUrl = "https://ww2.mangafreak.me";
-    }
+  getSettings(): Settings {
+    return {
+      supportsMultiLanguage: false,
+      supportsMultiScanlator: false,
+    };
+  }
 
-    getSettings() {
-        return {
-            supportsMultiLanguage: false,
-            supportsMultiScanlator: false,
-        };
-    }
+  async search(opts: QueryOptions): Promise<SearchResult[]> {
+    const queryParam = opts.query.toLowerCase();
+    const url = `${this.baseUrl}/Find/${encodeURIComponent(queryParam)}`;
 
-    async search(opts) {
-        const res = await fetch(this.baseUrl + "/Find/" + encodeURIComponent(opts.query));
-        const html = await res.text();
-        const $ = cheerio.load(html);
+    const res = await fetch(url);
+    const body = await res.text();
+    const doc: DocSelectionFunction = LoadDoc(body);
 
-        const results = [];
+    const results: SearchResult[] = [];
 
-        $(".manga_search_item").each((i, el) => {
-            const link = $(el).find("a").first().attr("href");
-            const title = $(el).find("h3 a").text().trim();
-            let image = $(el).find("img").attr("src") || "";
-            if (image && !image.startsWith("http")) image = this.baseUrl + image;
+    doc(".manga_search_item").each((i, el) => {
+      const title = el.find("h3 a").first().text().trim();
+      const link = el.find("a").first().attrs()["href"];
+      const image = el.find("img").first().attrs()["src"];
+      results.push({
+        id: link.replace("/Manga/", ""),
+        title,
+        image: image.startsWith("http") ? image : this.baseUrl + image,
+      });
+    });
 
-            if (link) {
-                results.push({
-                    id: link.replace("/Manga/", ""),
-                    title: title,
-                    image: image,
-                });
-            }
+    return results;
+  }
+
+  async findChapters(mangaId: string): Promise<ChapterDetails[]> {
+    const url = `${this.baseUrl}/Manga/${mangaId}`;
+    const res = await fetch(url);
+    const body = await res.text();
+    const doc: DocSelectionFunction = LoadDoc(body);
+
+    const chapters: ChapterDetails[] = [];
+
+    doc("tr").each((i, el) => {
+      const linkEl = el.find("td a").first();
+      const link = linkEl.attrs()["href"];
+      const title = linkEl.text().trim();
+      const date = el.find("td").eq(1).text().trim();
+
+      if (link) {
+        chapters.push({
+          id: link.replace("/Read1_", ""),
+          url: this.baseUrl + link,
+          title,
+          chapter: title.match(/\d+/)?.[0] ?? "Oneshot",
+          index: i,
+          updatedAt: date,
         });
+      }
+    });
 
-        return results;
-    }
+    return chapters;
+  }
 
-    async findChapters(mangaId) {
-        const res = await fetch(this.baseUrl + "/Manga/" + mangaId);
-        const html = await res.text();
-        const $ = cheerio.load(html);
+  async findChapterPages(chapterId: string): Promise<ChapterPage[]> {
+    const url = `${this.baseUrl}/Read1_${chapterId}`;
+    const res = await fetch(url);
+    const body = await res.text();
+    const doc: DocSelectionFunction = LoadDoc(body);
 
-        const chapters = [];
+    const pages: ChapterPage[] = [];
 
-        $("tr").each((i, el) => {
-            const linkEl = $(el).find("td a");
-            const link = linkEl.attr("href");
-            const title = linkEl.text().trim();
-            const date = $(el).find("td").eq(1).text().trim();
+    doc("div.image_orientation img").each((i, el) => {
+      const url = el.attrs()["src"];
+      pages.push({
+        url,
+        index: i,
+        headers: { Referer: this.baseUrl },
+      });
+    });
 
-            if (link) {
-                chapters.push({
-                    id: link.replace("/Read1_", ""),
-                    url: this.baseUrl + link,
-                    title: title,
-                    chapter: (title.match(/\d+/) || ["Oneshot"])[0],
-                    index: i,
-                    updatedAt: date,
-                });
-            }
-        });
-
-        return chapters;
-    }
-
-    async findChapterPages(chapterId) {
-        const res = await fetch(this.baseUrl + "/Read1_" + chapterId);
-        const html = await res.text();
-        const $ = cheerio.load(html);
-
-        const pages = [];
-
-        $("div.image_orientation img").each((i, el) => {
-            const url = $(el).attr("src");
-            if (url) {
-                pages.push({
-                    url: url,
-                    index: i,
-                    headers: { Referer: this.baseUrl },
-                });
-            }
-        });
-
-        return pages;
-    }
+    return pages;
+  }
 }
