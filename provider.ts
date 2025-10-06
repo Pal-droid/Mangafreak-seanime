@@ -1,3 +1,6 @@
+/// <reference path="./manga-provider.d.ts" />
+/// <reference path="./doc.d.ts" />
+
 class Provider {
   private baseUrl = "https://ww2.mangafreak.me";
 
@@ -52,10 +55,10 @@ class Provider {
 
     const chapters: ChapterDetails[] = [];
 
-    // FIX: select all rows inside the table in the manga series list
-    doc("div.manga_series_list table tr").each((i, el) => {
-      const th = el.find("th");
-      if (th.length) return; // skip header row
+    // Robust selector: matches <tr> directly under <table> or inside <tbody>
+    doc("div.manga_series_list table tr, div.manga_series_list table tbody tr").each((i, el) => {
+      // Skip header row
+      if (el.find("th").length) return;
 
       const aEl = el.find("td a").first();
       if (!aEl.length) return;
@@ -65,7 +68,7 @@ class Provider {
       const date = el.find("td").eq(1).text().trim();
 
       if (link) {
-        // Updated regex: handles decimals and oneshots, drops 'e' if present
+        // Regex handles decimals, oneshots, and ignores 'e'
         const chapterNumber = title.match(/(\d+(\.\d+)?)/)?.[1] ?? "Oneshot";
 
         chapters.push({
@@ -110,6 +113,7 @@ class Provider {
       });
     });
 
+    console.log(`[FindChapterPages] Found ${pages.length} pages.`);
     return pages;
   }
 }
