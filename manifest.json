@@ -8,6 +8,5 @@
   "type": "manga-provider",
   "language": "typescript",
   "lang": "en",
-  "payload": "",
   "payloadURI": "https://raw.githubusercontent.com/weezer/Mangafreak-seanime/main/provider.ts"
 }
