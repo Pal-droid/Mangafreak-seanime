@@ -1,10 +1,10 @@
 {
-  "id": "mangafreak",                       
-  "name": "MangaFreak",                      
-  "version": "1.0.0",                        
-  "author": "pal",                        
-  "type": "manga",                           
-  "language": "typescript",                  
-  "payload": "https://raw.githubusercontent.com/Pal-droid/Mangafreak-seanime/main/provider.ts", 
+  "id": "mangafreak-seanime",
+  "name": "MangaFreak",
+  "version": "1.0.0",
+  "author": "pal",
+  "type": "manga",
+  "language": "typescript",
+  "payload": "https://raw.githubusercontent.com/Pal-droid/Mangafreak-seanime/main/provider.ts",
   "description": "Manga provider for Mangafreak.me"
 }
