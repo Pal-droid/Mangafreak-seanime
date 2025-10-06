@@ -29,13 +29,14 @@ class Provider {
     const results: SearchResult[] = [];
 
     doc(".manga_search_item").each((i, el) => {
-      const linkEl = el.find("h3 a").first();
+      const $el = doc(el);
+      const linkEl = $el.find("h3 a").first();
       if (!linkEl.length) return;
 
       const title = linkEl.text().trim();
-      const link = linkEl.attrs()["href"];
-      const imgEl = el.find("span a img").first();
-      const imgSrc = imgEl.attrs()["src"] ?? "";
+      const link = linkEl.attr("href");
+      const imgEl = $el.find("span a img").first();
+      const imgSrc = imgEl.attr("src") ?? "";
 
       if (link) {
         results.push({
@@ -66,24 +67,25 @@ class Provider {
     const doc: DocSelectionFunction = LoadDoc(body);
     const chapters: ChapterDetails[] = [];
 
-    // ✅ Correct selector for your provided HTML
+    // ✅ Fixed: ensure we wrap each element in `doc(el)` before querying
     doc("div.manga_series_list_section table tr").each((i, el) => {
-      const th = el.find("th");
-      if (th.length) return; // skip table header row
+      const $el = doc(el);
+      if ($el.find("th").length) return; // skip header
 
-      const linkEl = el.find("a").first();
-      const dateEl = el.find("td").eq(1);
+      const linkEl = $el.find("a").first();
+      const dateEl = $el.find("td").eq(1);
 
       if (!linkEl.length) return;
 
-      const link = linkEl.attrs()["href"];
+      const link = linkEl.attr("href");
       const title = linkEl.text().trim();
       const date = dateEl.text().trim();
 
       if (!link) return;
 
-      // Extract number like "1", "2.5", etc.
-      const chapterNumber = title.match(/(\d+(\.\d+)?)/)?.[1] ?? "Oneshot";
+      // Extract chapter number like "1", "2.5", etc.
+      const match = title.match(/(\d+(\.\d+)?)/);
+      const chapterNumber = match ? match[1] : "Oneshot";
 
       chapters.push({
         id: link.replace("/Read1_", ""),
@@ -116,9 +118,10 @@ class Provider {
     const doc: DocSelectionFunction = LoadDoc(body);
     const pages: ChapterPage[] = [];
 
-    // ✅ Matches: <div class="image_orientation"><img src="..." /></div>
+    // ✅ Correct for your HTML structure
     doc("div.image_orientation img").each((i, el) => {
-      const imgSrc = el.attrs()["src"];
+      const $el = doc(el);
+      const imgSrc = $el.attr("src");
       if (!imgSrc) return;
 
       pages.push({
