@@ -1,86 +1,83 @@
 /// <reference path="./manga-provider.d.ts" />
-import { load } from "cheerio";
+
+var load = window.cheerio || null; // Seanime provides cheerio via `window.cheerio`
 
 class Provider {
 
-    private baseUrl = "https://ww2.mangafreak.me";
+    baseUrl = "https://ww2.mangafreak.me";
 
-    getSettings(): Settings {
+    getSettings() {
         return {
             supportsMultiLanguage: false,
             supportsMultiScanlator: false,
         };
     }
 
-    async search(opts: QueryOptions): Promise<SearchResult[]> {
-        const res = await fetch(`${this.baseUrl}/Find/${encodeURIComponent(opts.query)}`);
-        const html = await res.text();
-        const $ = load(html);
+    async search(opts) {
+        var res = await fetch(this.baseUrl + "/Find/" + encodeURIComponent(opts.query));
+        var html = await res.text();
+        var $ = load(html);
 
-        const results: SearchResult[] = [];
+        var results = [];
 
-        $(".manga_search_item").each((i, el) => {
-            const link = $(el).find("a").first().attr("href")!;
-            const title = $(el).find("h3 a").text().trim();
-            const image = $(el).find("img").attr("src") ?? "";
+        $(".manga_search_item").each(function(i, el) {
+            var link = $(el).find("a").first().attr("href");
+            var title = $(el).find("h3 a").text().trim();
+            var image = $(el).find("img").attr("src") || "";
             results.push({
                 id: link.replace("/Manga/", ""),
-                title,
+                title: title,
                 image: image.startsWith("http") ? image : this.baseUrl + image,
             });
-        });
+        }.bind(this));
 
         return results;
     }
 
-    async findChapters(mangaId: string): Promise<ChapterDetails[]> {
-        const res = await fetch(`${this.baseUrl}/Manga/${mangaId}`);
-        const html = await res.text();
-        const $ = load(html);
+    async findChapters(mangaId) {
+        var res = await fetch(this.baseUrl + "/Manga/" + mangaId);
+        var html = await res.text();
+        var $ = load(html);
 
-        const chapters: ChapterDetails[] = [];
+        var chapters = [];
 
-        $("tr").each((i, el) => {
-            const linkEl = $(el).find("td a");
-            const link = linkEl.attr("href");
-            const title = linkEl.text().trim();
-            const date = $(el).find("td").eq(1).text().trim();
+        $("tr").each(function(i, el) {
+            var linkEl = $(el).find("td a");
+            var link = linkEl.attr("href");
+            var title = linkEl.text().trim();
+            var date = $(el).find("td").eq(1).text().trim();
 
             if (link) {
                 chapters.push({
                     id: link.replace("/Read1_", ""),
                     url: this.baseUrl + link,
-                    title,
-                    chapter: title.match(/\d+/)?.[0] ?? "Oneshot",
+                    title: title,
+                    chapter: (title.match(/\d+/) || ["Oneshot"])[0],
                     index: i,
                     updatedAt: date,
                 });
             }
-        });
+        }.bind(this));
 
         return chapters;
     }
 
-    async findChapterPages(chapterId: string): Promise<ChapterPage[]> {
-        const res = await fetch(`${this.baseUrl}/Read1_${chapterId}`);
-        const html = await res.text();
-        const $ = load(html);
+    async findChapterPages(chapterId) {
+        var res = await fetch(this.baseUrl + "/Read1_" + chapterId);
+        var html = await res.text();
+        var $ = load(html);
 
-        const pages: ChapterPage[] = [];
+        var pages = [];
 
-        $("div.image_orientation img").each((i, el) => {
-            const url = $(el).attr("src")!;
+        $("div.image_orientation img").each(function(i, el) {
+            var url = $(el).attr("src");
             pages.push({
-                url,
+                url: url,
                 index: i,
-                headers: {
-                    Referer: this.baseUrl,
-                },
+                headers: { Referer: this.baseUrl },
             });
-        });
+        }.bind(this));
 
         return pages;
     }
 }
-
-export default Provider;
