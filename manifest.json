@@ -1,9 +1,10 @@
 {
-  "name": "MangaFreak",
-  "type": "manga",
-  "description": "Scrapes manga from mangafreak.me",
-  "author": "weezer",
-  "version": "1.0.0",
-  "module": "provider.ts",
-  "icon": "icon.png"
+  "id": "mangafreak",                       
+  "name": "MangaFreak",                      
+  "version": "1.0.0",                        
+  "author": "pal",                        
+  "type": "manga",                           
+  "language": "typescript",                  
+  "payload": "https://raw.githubusercontent.com/Pal-droid/Mangafreak-seanime/main/provider.ts", 
+  "description": "Manga provider for Mangafreak.me"
 }
