@@ -1,10 +1,3 @@
-/// <reference path="./manga-provider.d.ts" />
-/// <reference path="./doc.d.ts" /> // Assuming LoadDoc is available via this reference
-
-/**
- * Declared types for clarity, based on the provided documentation.
- * In a final setup, these would be available via the reference paths.
- */
 declare type SearchResult = {
     id: string
     title: string
@@ -42,10 +35,6 @@ declare type Settings = {
 }
 
 
-/**
- * The main extension class.
- * [span_0](start_span)The class name MUST be 'Provider' as required by the documentation[span_0](end_span).
- */
 class Provider {
     // The base API URL for MangaFreak
     private api = 'https://ww2.mangafreak.me';
